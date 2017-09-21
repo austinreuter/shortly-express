@@ -3,6 +3,7 @@ const parseCookies = (req, res, next) => {
     req.cookies = {};
   }
   if (req.headers.cookie) {
+    // split into array of (cookie) name-value pairs (e.g. 'id=123')
     let cookies = req.headers.cookie.split('; ');
     cookies.forEach(cookie => {
       let tuple = cookie.split('=');

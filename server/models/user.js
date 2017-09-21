@@ -1,5 +1,6 @@
 const utils = require('../lib/hashUtils');
 const Model = require('./model');
+const models = require('.');
 
 /**
  * Users is a class with methods to interact with the users table, which
@@ -45,13 +46,25 @@ class Users extends Model {
     return super.create.call(this, newUser);
   }
 
-  validateLogin({username, password}) {
+  login({username, password}, sessionHash) {
     return super.get({username: username})
-    .then(user => {
-      if (user) {
-        return this.compare(password, user.password, user.salt);
-      }
-    });
+      .then(user => {
+        if (this.compare(password, user.password, user.salt)) {
+          // if password is valid, bind session to user and return user object
+          models.Sessions.update({
+            hash: sessionHash
+          }, {
+            userId: user.id
+          });
+          return user;
+        } else {
+          // otherwise, throw error
+          throw Error;
+        }
+      })
+      .catch(err => {
+        throw err;
+      });
   }
 }
 

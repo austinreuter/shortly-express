@@ -15,11 +15,12 @@ app.use(partials());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(parseCookies);
+app.use(Auth.createSession);
 app.use(express.static(path.join(__dirname, '../public')));
 
 
 
-app.get('/', Auth.createSession, (req, res) => {
+app.get('/', (req, res) => {
   res.render('index');
 });
 
@@ -82,13 +83,18 @@ app.get('/signup', (req, res) => {
 
 app.post('/signup', (req, res) => {
   let user = req.body;
+  let hash = req.session.hash;
   models.Users.create(user)
-  .then(results => {
-    res.redirect('/');
-  })
-  .catch(err => {
-    res.redirect('/signup');
-  });
+    // log in using user-provided credentials
+    .then(() => models.Users.login(user, hash))
+    // redirect to homepage after successful login
+    .then(() => {
+      res.redirect('/');
+    })
+    // redirect to signup page for unsuccessful signup
+    .catch(err => {
+      res.redirect('/signup');
+    });
 });
 
 app.get('/login', (req, res) => {
@@ -97,17 +103,27 @@ app.get('/login', (req, res) => {
 
 app.post('/login', (req, res) => {
   let user = req.body;
-  models.Users.validateLogin(user)
-  .then(valid => {
-    if (valid) {
+  let hash = req.session.hash;
+  // attempt log in using user-provided credentials
+  models.Users.login(user, hash)
+    // redirect to homepage after login
+    .then(() => {
       res.redirect('/');
-    } else {
+    })
+    // redirect to login page for unsuccessful login
+    .catch(err => {
       res.redirect('/login');
-    }
-  })
-  .catch(err => {
-    res.redirect('/login');
-  });
+    });
+});
+
+app.get('/logout', (req, res) => {
+  let hash = req.session.hash;
+  // destroy session
+  models.Sessions.delete({hash: hash})
+    // redirect to homepage after logout
+    .then(() => {
+      res.redirect('/');
+    });
 });
 
 /************************************************************/
