@@ -44,6 +44,16 @@ class Users extends Model {
 
     return super.create.call(this, newUser);
   }
+
+  validateLogin({username, password}) {
+    return super.get({username: username})
+    .then(user => {
+      if (user) {
+        return this.compare(password, user.password, user.salt);
+      }
+    });
+  }
 }
+
 
 module.exports = new Users();

@@ -3,6 +3,7 @@ const path = require('path');
 const utils = require('./lib/hashUtils');
 const partials = require('express-partials');
 const bodyParser = require('body-parser');
+const parseCookies = require('./middleware/cookieParser');
 const Auth = require('./middleware/auth');
 const models = require('./models');
 
@@ -13,22 +14,20 @@ app.set('view engine', 'ejs');
 app.use(partials());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(parseCookies);
 app.use(express.static(path.join(__dirname, '../public')));
 
 
 
-app.get('/', 
-(req, res) => {
+app.get('/', Auth.createSession, (req, res) => {
   res.render('index');
 });
 
-app.get('/create', 
-(req, res) => {
+app.get('/create', (req, res) => {
   res.render('index');
 });
 
-app.get('/links', 
-(req, res, next) => {
+app.get('/links', (req, res, next) => {
   models.Links.getAll()
     .then(links => {
       res.status(200).send(links);
@@ -38,8 +37,7 @@ app.get('/links',
     });
 });
 
-app.post('/links', 
-(req, res, next) => {
+app.post('/links', (req, res, next) => {
   var url = req.body.url;
   if (!models.Links.isValidUrl(url)) {
     // send back a 404 if link is not valid
@@ -78,7 +76,39 @@ app.post('/links',
 // Write your authentication routes here
 /************************************************************/
 
+app.get('/signup', (req, res) => {
+  res.render('signup');
+});
 
+app.post('/signup', (req, res) => {
+  let user = req.body;
+  models.Users.create(user)
+  .then(results => {
+    res.redirect('/');
+  })
+  .catch(err => {
+    res.redirect('/signup');
+  });
+});
+
+app.get('/login', (req, res) => {
+  res.render('login');
+});
+
+app.post('/login', (req, res) => {
+  let user = req.body;
+  models.Users.validateLogin(user)
+  .then(valid => {
+    if (valid) {
+      res.redirect('/');
+    } else {
+      res.redirect('/login');
+    }
+  })
+  .catch(err => {
+    res.redirect('/login');
+  });
+});
 
 /************************************************************/
 // Handle the code parameter route last - if all other routes fail
